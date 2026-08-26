@@ -1,0 +1,23 @@
+{
+  "name": "axora-one",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AXORA ONE — enterprise construction/engineering platform (Wave 1 foundation)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.9.0 <23"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @axora/api --filter @axora/web dev",
+    "build": "pnpm db:generate && pnpm build:packages && pnpm --filter @axora/api build && pnpm --filter @axora/web build",
+    "build:packages": "pnpm --filter @axora/types build && pnpm --filter @axora/security build && pnpm --filter @axora/design-system build && pnpm --filter @axora/database build",
+    "typecheck": "pnpm db:generate && pnpm build:packages && pnpm --filter @axora/api typecheck && pnpm --filter @axora/web typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm build:packages && pnpm --filter @axora/security test && pnpm --filter @axora/api test",
+    "db:generate": "pnpm --filter @axora/database prisma:generate",
+    "db:migrate:dev": "pnpm --filter @axora/database prisma:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @axora/database prisma:migrate:deploy",
+    "db:seed": "pnpm --filter @axora/database prisma:seed",
+    "predev": "pnpm db:generate && pnpm build:packages"
+  }
+}
