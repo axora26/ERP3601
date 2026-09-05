@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: axora
+      POSTGRES_PASSWORD: axora_dev_password
+      POSTGRES_DB: axora_one
+    ports:
+      - "5432:5432"
+    volumes:
+      - axora_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U axora -d axora_one"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://axora:axora_dev_password@postgres:5432/axora_one?schema=public
+      API_PORT: 4000
+      WEB_ORIGIN: http://localhost:3000
+      SESSION_COOKIE_NAME: axora_session
+      SESSION_TTL_HOURS: 12
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      NEXT_PUBLIC_APP_NAME: AXORA ONE
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  axora_postgres_data:

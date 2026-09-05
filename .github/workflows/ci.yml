@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: axora
+          POSTGRES_PASSWORD: axora_dev_password
+          POSTGRES_DB: axora_one
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U axora -d axora_one"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://axora:axora_dev_password@localhost:5432/axora_one?schema=public
+      API_PORT: 4000
+      WEB_ORIGIN: http://localhost:3000
+      SESSION_COOKIE_NAME: axora_session
+      SESSION_TTL_HOURS: "12"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # pnpm version comes from package.json's "packageManager" field
+      # (pnpm@10.33.0). Passing `version` here too makes the action refuse
+      # to run ("Multiple versions of pnpm specified").
+      - uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Prisma format + validate
+        run: pnpm --filter @axora/database prisma:format && pnpm --filter @axora/database prisma:validate
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      # Must run before migrate/seed: prisma/seed.ts imports @axora/security,
+      # which is resolved as a built package (dist/index.js), not source.
+      - name: Build workspace packages
+        run: pnpm build:packages
+
+      - name: Run migrations
+        run: pnpm db:migrate:deploy
+
+      - name: Seed demo data
+        run: pnpm db:seed
+
+      - name: Typecheck API
+        run: pnpm --filter @axora/api typecheck
+
+      - name: Typecheck web
+        run: pnpm --filter @axora/web typecheck
+
+      - name: Build API
+        run: pnpm --filter @axora/api build
+
+      - name: Build web
+        run: pnpm --filter @axora/web build
+
+      - name: Test security package
+        run: pnpm --filter @axora/security test
+
+      - name: Test API (integration, against the service-container database)
+        run: pnpm --filter @axora/api test
