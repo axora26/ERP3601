@@ -49,14 +49,16 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # Must run before migrate/seed: prisma/seed.ts imports @axora/security,
+      # which is resolved as a built package (dist/index.js), not source.
+      - name: Build workspace packages
+        run: pnpm build:packages
+
       - name: Run migrations
         run: pnpm db:migrate:deploy
 
       - name: Seed demo data
         run: pnpm db:seed
-
-      - name: Build workspace packages
-        run: pnpm build:packages
 
       - name: Typecheck API
         run: pnpm --filter @axora/api typecheck
