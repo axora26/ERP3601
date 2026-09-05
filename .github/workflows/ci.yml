@@ -35,9 +35,10 @@ jobs:
         with:
           node-version: "22"
 
+      # pnpm version comes from package.json's "packageManager" field
+      # (pnpm@10.33.0). Passing `version` here too makes the action refuse
+      # to run ("Multiple versions of pnpm specified").
       - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
